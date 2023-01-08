@@ -1,10 +1,163 @@
-import React from 'react';
-import { Text, View } from 'react-native';
+import React, { useState, useEffect } from "react";
+import {
+  Text,
+  View,
+  Image,
+  FlatList,
+  Linking,
+  ActivityIndicator,
+} from "react-native";
+import { TouchableOpacity } from "react-native-gesture-handler";
+import { EvilIcons } from "@expo/vector-icons";
+import { AntDesign } from "@expo/vector-icons";
+import axiosConfig from "../helpers/axiosConfig";
+import { format } from "date-fns";
+import TweetDetails from "./TweetDetails";
 
-export default function ProfileScreen() {
-  return (
-     <View className="flex-1 items-center justify-center bg-white">
-      <Text>Profile Screen</Text>
+export default function ProfileScreen({ route, navigation }) {
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingTweets, setIsLoadingTweets] = useState(true);
+  const [data, setData] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [isAtEndOfScrolling, setIsAtEndOfScrolling] = useState(false);
+
+  useEffect(() => {
+    getUser();
+    getUserTweets();
+  }, [page]);
+
+  const getUser = () => {
+    axiosConfig
+      .get(`users/${route.params.userId}`)
+      .then((res) => {
+        // console.log(res.data);
+        setUser(res.data.data);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.log(err);
+        setIsLoading(false);
+      });
+  };
+
+  const getUserTweets = () => {
+    axiosConfig
+      .get(`/users/${route.params.userId}/tweets?page=${page}`)
+      .then((res) => {
+        if (page === 1) {
+          setData(res.data.data);
+        } else {
+          setData([...data, ...res.data.data]);
+        }
+
+        if (!res.data.next_page_url) {
+          setIsAtEndOfScrolling(true);
+        }
+        setIsLoadingTweets(false);
+        setIsRefreshing(false);
+      })
+      .catch((err) => {
+        console.log(err);
+        setIsLoadingTweets(false);
+        setIsRefreshing(false);
+      });
+  };
+
+  const ProfileHeader = () => (
+    <View className="flex-1 bg-white">
+      {isLoading ? (
+        <ActivityIndicator className="mt-2" size="large" color="gray" />
+      ) : (
+        <>
+          <Image
+            className="w-full h-2/4"
+            source={{
+              uri: "https://loremflickr.com/g/320/240/paris",
+            }}
+          />
+          <View className="flex flex-row justify-between px-2 items-end">
+            <Image
+              className="inline-block h-16 w-16 -mt-6 rounded-full ring-2 ring-white border-2 border-white mr-2"
+              source={{ uri: user.avatar }}
+            />
+
+            <TouchableOpacity
+              className="bg-gray-700 py-2 px-3 rounded-full"
+              onPress={() => Alert.alert("User Followed")}
+            >
+              <Text className="text-white font-bold">Follow</Text>
+            </TouchableOpacity>
+          </View>
+          <View className="px-2">
+            <Text className="font-bold text-xl">{user.name}</Text>
+            <Text className="text-sm text-gray-500 -mt-1">
+              @{user.username}
+            </Text>
+          </View>
+          <View className="px-2">
+            <Text className="font-semibold text-gray-500 text-md mt-3">
+              {user.profile}
+            </Text>
+          </View>
+          <View className="p-2 mt-2 flex flex-row">
+            <EvilIcons name="location" size={24} color="black" />
+            <Text className="text-sm text-gray-500">{user.location}</Text>
+          </View>
+          <View className="px-2 -mt-1 flex flex-row">
+            <TouchableOpacity
+              className="flex flex-row"
+              onPress={() => Linking.openURL(user.link)}
+            >
+              <EvilIcons name="link" size={24} color="black" />
+              <Text className="text-sm text-blue-500 mr-3">
+                {user.linkText}
+              </Text>
+            </TouchableOpacity>
+            <AntDesign name="calendar" size={18} color="black" />
+            <Text className="text-sm text-gray-500 ml-1">
+              Joined {format(new Date(user.created_at), "MMM yyy")}
+            </Text>
+          </View>
+          <View className="px-3 mt-2 mb-3 flex flex-row">
+            <Text className="font-bold">456</Text>
+            <Text className="text-gray-500 ml-1 mr-3">Following</Text>
+            <Text className="font-bold">456</Text>
+            <Text className="text-gray-500 ml-1">Followers</Text>
+          </View>
+        </>
+      )}
     </View>
+  );
+
+  const handleRefresh = () => {
+    setPage(1);
+    setIsAtEndOfScrolling(false);
+    setIsRefreshing(true);
+    getUserTweets();
+  };
+
+  const handleEnd = () => {
+    setPage(page + 1);
+  };
+
+  return (
+    <FlatList
+      data={data}
+      renderItem={(props) => <TweetDetails {...props} />}
+      keyExtractor={(item) => item.id.toString()}
+      ItemSeparatorComponent={() => (
+        <View className="border-gray-200 border-b"></View>
+      )}
+      ListHeaderComponent={ProfileHeader}
+      refreshing={isRefreshing}
+      onRefresh={handleRefresh}
+      onEndReached={handleEnd}
+      onEndReachedThreshold={0}
+      ListFooterComponent={() =>
+        !isAtEndOfScrolling && <ActivityIndicator size="large" color="gray" />
+      }
+    />
   );
 }

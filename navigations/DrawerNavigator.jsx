@@ -1,6 +1,6 @@
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import React from "react";
-import { SettingsScreen } from "../screens";
+import { NewTweet, SettingsScreen } from "../screens";
 import StackNavigator from "./StackNavigator";
 
 const Drawer = createDrawerNavigator();
@@ -14,6 +14,7 @@ function DrawerNavigator() {
     >
       <Drawer.Screen name="Home" component={StackNavigator} />
       <Drawer.Screen name="Settings" component={SettingsScreen} />
+      <Drawer.Screen name="New Tweet" component={NewTweet} />
     </Drawer.Navigator>
   );
 }
