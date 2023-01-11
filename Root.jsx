@@ -3,20 +3,28 @@ import React, { useContext, useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import DrawerNavigator from "./navigations/DrawerNavigator";
 import { AuthContext } from "./context/AuthProvider";
-import { Text, View, ActivityIndicator } from "react-native";
-import LoginScreen from "./screens/Auth/LoginScreen";
+import { View, ActivityIndicator } from "react-native";
 import AuthStackNavigator from "./navigations/AuthStackNavigator";
+import * as SecureStore from "expo-secure-store";
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useContext(AuthContext);
+  const { user, setUser } = useContext(AuthContext);
 
   useEffect(() => {
     //check if user is logged in
     //Check securestore for the user object/token
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
+    SecureStore.getItemAsync("user")
+      .then((userString) => {
+        if (userString) {
+          setUser(JSON.parse(userString));
+        }
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        console.log(error);
+        setIsLoading(false);
+      });
   }, []);
 
   if (isLoading) {
