@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { Text, View, Image, ActivityIndicator } from "react-native";
+import React, { useState, useEffect, useRef, useContext } from "react";
+import { Text, View, Image, ActivityIndicator, Alert } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { EvilIcons } from "@expo/vector-icons";
 import { Entypo } from "@expo/vector-icons";
+import { AntDesign } from "@expo/vector-icons";
 import axiosConfig from "../helpers/axiosConfig";
 import { format } from "date-fns";
+import { Modalize } from "react-native-modalize";
+import { AuthContext } from "../context/AuthProvider";
 
 export default function TweetScreen({ route, navigation }) {
   const [tweet, setTweet] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const modalizeRef = useRef(null);
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
     getTweet();
@@ -26,6 +31,40 @@ export default function TweetScreen({ route, navigation }) {
         setIsLoading(false);
       });
   };
+
+  const deleteTweet = () => {
+    axiosConfig.defaults.headers.common[
+      "Authorization"
+    ] = `Bearer ${loggedUser.token}`;
+
+    axiosConfig
+      .delete(`tweets/${route.params.tweetId}`)
+      .then((res) => {
+        Alert.alert("Tweet deleted successfully!");
+        navigation.navigate("Home2", {
+          tweetDeleted: true,
+        });
+      })
+      .catch((err) => {
+        console.log(err.response);
+      });
+  };
+
+  const showAlert = () => {
+    Alert.alert("Delete Tweet?", null, [
+      {
+        text: "Cancel",
+        onPress: () => modalizeRef.current?.close(),
+        style: "cancel",
+      },
+      {
+        text: "OK",
+        onPress: () => deleteTweet(),
+        style: "default",
+      },
+    ]);
+  };
+
   return (
     <View className="flex-1 bg-white">
       {isLoading ? (
@@ -58,9 +97,14 @@ export default function TweetScreen({ route, navigation }) {
                 </Text>
               </View>
             </View>
-            <TouchableOpacity className="justify-item-end">
-              <Entypo name="dots-three-vertical" size={16} color="grey" />
-            </TouchableOpacity>
+            {user.id === tweet.user.id && (
+              <TouchableOpacity
+                className="justify-item-end"
+                onPress={() => modalizeRef.current?.open()}
+              >
+                <Entypo name="dots-three-vertical" size={16} color="grey" />
+              </TouchableOpacity>
+            )}
           </View>
           <View className="border-b border-gray-200">
             <Text className="p-2 leading-6">{tweet.body}</Text>
@@ -108,6 +152,22 @@ export default function TweetScreen({ route, navigation }) {
               />
             </TouchableOpacity>
           </View>
+
+          <Modalize ref={modalizeRef} snapPoint={200}>
+            <View className="p-3">
+              <TouchableOpacity className="flex flex-row items-center mb-6 gap-2">
+                <AntDesign name="pushpino" size={24} color="#222" />
+                <Text className="font-semibold">Pin Tweet</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={showAlert}
+                className="flex flex-row items-center gap-2"
+              >
+                <AntDesign name="delete" size={24} color="#222" />
+                <Text className="font-semibold">Delete Tweet</Text>
+              </TouchableOpacity>
+            </View>
+          </Modalize>
         </>
       )}
     </View>

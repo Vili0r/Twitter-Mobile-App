@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Text,
   View,
@@ -6,6 +6,7 @@ import {
   FlatList,
   Linking,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { EvilIcons } from "@expo/vector-icons";
@@ -13,6 +14,7 @@ import { AntDesign } from "@expo/vector-icons";
 import axiosConfig from "../helpers/axiosConfig";
 import { format } from "date-fns";
 import TweetDetails from "./TweetDetails";
+import { AuthContext } from "../context/AuthProvider";
 
 export default function ProfileScreen({ route, navigation }) {
   const [user, setUser] = useState(null);
@@ -22,11 +24,17 @@ export default function ProfileScreen({ route, navigation }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [isAtEndOfScrolling, setIsAtEndOfScrolling] = useState(false);
+  const [isFollowing, setisFollowing] = useState(false);
+  const { user: loggedUser } = useContext(AuthContext);
 
   useEffect(() => {
     getUser();
     getUserTweets();
   }, [page]);
+
+  useEffect(() => {
+    getIsFollowing();
+  }, []);
 
   const getUser = () => {
     axiosConfig
@@ -37,7 +45,7 @@ export default function ProfileScreen({ route, navigation }) {
         setIsLoading(false);
       })
       .catch((err) => {
-        console.log(err);
+        console.log(err.response);
         setIsLoading(false);
       });
   };
@@ -59,9 +67,56 @@ export default function ProfileScreen({ route, navigation }) {
         setIsRefreshing(false);
       })
       .catch((err) => {
-        console.log(err);
+        console.log(err.response);
         setIsLoadingTweets(false);
         setIsRefreshing(false);
+      });
+  };
+
+  const getIsFollowing = () => {
+    axiosConfig.defaults.headers.common[
+      "Authorization"
+    ] = `Bearer ${loggedUser.token}`;
+
+    axiosConfig
+      .get(`is_following/${route.params.userId}`)
+      .then((res) => {
+        setisFollowing(res.data);
+      })
+      .catch((err) => {
+        console.log(err.response);
+      });
+  };
+
+  const unFollow = () => {
+    axiosConfig.defaults.headers.common[
+      "Authorization"
+    ] = `Bearer ${loggedUser.token}`;
+
+    axiosConfig
+      .post(`unfollow/${route.params.userId}`)
+      .then((res) => {
+        setisFollowing(false);
+        Alert.alert("You are now unfollowing this user.");
+      })
+      .catch((err) => {
+        console.log(err.response);
+      });
+  };
+
+  const follow = () => {
+    axiosConfig.defaults.headers.common[
+      "Authorization"
+    ] = `Bearer ${loggedUser.token}`;
+
+    axiosConfig
+      .post(`follow/${route.params.userId}`)
+      .then((res) => {
+        setisFollowing(true);
+        Alert.alert("You are now following this user.");
+      })
+      .catch((err) => {
+        console.log(err.response);
       });
   };
 
@@ -82,13 +137,25 @@ export default function ProfileScreen({ route, navigation }) {
               className="inline-block h-16 w-16 -mt-6 rounded-full ring-2 ring-white border-2 border-white mr-2"
               source={{ uri: user.avatar }}
             />
-
-            <TouchableOpacity
-              className="bg-gray-700 py-2 px-3 rounded-full"
-              onPress={() => Alert.alert("User Followed")}
-            >
-              <Text className="text-white font-bold">Follow</Text>
-            </TouchableOpacity>
+            {loggedUser.id !== route.params.userId && (
+              <View>
+                {!isFollowing ? (
+                  <TouchableOpacity
+                    className="bg-gray-700 py-2 px-3 rounded-full"
+                    onPress={() => follow()}
+                  >
+                    <Text className="text-white font-bold">Follow</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    className="bg-gray-700 py-2 px-3 rounded-full"
+                    onPress={() => unFollow()}
+                  >
+                    <Text className="text-white font-bold">Unfollow</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </View>
           <View className="px-2">
             <Text className="font-bold text-xl">{user.name}</Text>

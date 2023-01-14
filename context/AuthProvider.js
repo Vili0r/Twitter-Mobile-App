@@ -20,20 +20,19 @@ export const AuthProvider = ({ children }) => {
           setIsLoading(true);
           axiosConfig
             .post("/login", {
-              email: email,
-              password: password,
+              email,
+              password,
               device_name: "mobile",
             })
             .then((res) => {
               const userResponse = {
                 token: res.data.token,
-                id: res.data.id,
-                name: res.data.name,
-                email: res.data.email,
-                username: res.data.username,
-                avatar: res.data.avatar,
+                id: res.data.user.id,
+                name: res.data.user.name,
+                username: res.data.user.username,
+                email: res.data.user.email,
+                avatar: res.data.user.avatar,
               };
-
               setUser(userResponse);
               setError(null);
               SecureStore.setItemAsync("user", JSON.stringify(userResponse));

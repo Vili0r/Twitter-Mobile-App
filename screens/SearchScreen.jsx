@@ -20,13 +20,13 @@ export default function SearchScreen({ route, navigation }) {
   }, [page]);
 
   useEffect(() => {
-    if (route.params?.newTweetAdded) {
+    if (route.params?.newTweetAdded || route.params?.tweetDeleted) {
       getAllTweetsRefresh();
       flatListRef.current.scrollToOffset({
         offset: 0,
       });
     }
-  }, [route.params?.newTweetAdded]);
+  }, [route.params?.newTweetAdded, route.params?.tweetDeleted]);
 
   const getAllTweetsRefresh = () => {
     setPage(1);
